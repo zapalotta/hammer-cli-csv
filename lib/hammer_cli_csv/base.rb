@@ -14,8 +14,11 @@ module HammerCLICsv
     option %w(--threads), 'THREAD_COUNT', 'Number of threads to hammer with',
            :default => 1, :hidden => true
     option %w(--export), :flag, 'Export current data instead of importing'
+    option %w(--exportjson), :flag, 'Export to JSON format'
+    option %w(--importjson), :flag, 'Import from JSON format'
     option %w(--search), 'SEARCH', 'Only export search results'
     option %w(--file), 'FILE_NAME', 'CSV file (default to /dev/stdout with --export, otherwise required)'
+    option %w(--jsonfile), 'JSONFILE_NAME', 'JSON file (default to /dev/stdout with --export, otherwise required)'
     option %w(--prefix), 'PREFIX', 'Prefix for all name columns',
            :hidden => true
     option %w(--organization), 'ORGANIZATION', _('Only process organization matching this name')
@@ -62,6 +65,19 @@ module HammerCLICsv
             export csv
           end
         end
+      elsif option_exportjson?
+      
+	## TODO: Export to file
+ 	export_json 
+      elsif
+	if option_importjson?
+	  if option_file
+	    import_jsonfile( option_file )
+		
+	  end
+	else
+## FIXME Read from stdin
+	end 
       else
         import
       end
@@ -568,7 +584,8 @@ module HammerCLICsv
     end
 
     def foreman_hostgroup(options = {})
-      @query_hostgroups ||= {}
+      #@query_hostgroups ||= {}
+      @query_hostgroups = {}
 
       if options[:name]
         return nil if options[:name].nil? || options[:name].empty?
@@ -579,6 +596,7 @@ module HammerCLICsv
                                               'search' => "name=\"#{options[:name]}\""
                                             })['results']
           raise _("Host Group '%{name}' not found") % {:name => options[:name]} if !hostgroup || hostgroup.empty?
+
           options[:id] = hostgroup[0]['id']
           @query_hostgroups[options[:name]] = options[:id]
         end
@@ -586,7 +604,7 @@ module HammerCLICsv
       else
         return nil if options[:id].nil?
         options[:name] = @query_hostgroups.key(options[:id])
-        if !options[:name]
+	 if !options[:name]
           hostgroup = @api.resource(:hostgroups).call(:show, {'id' => options[:id]})
           raise _("Host Group 'id=%{id}' not found") % {:id => options[:id]} if !hostgroup || hostgroup.empty?
           options[:name] = hostgroup['name']
@@ -594,7 +612,6 @@ module HammerCLICsv
         end
         result = options[:name]
       end
-
       result
     end
 
